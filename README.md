@@ -135,148 +135,134 @@ The application will be available at `http://localhost:5173`
 - **Vector Store**: ChromaDB (persistent) or FAISS (fast)
 - **Chunk Size**: Document splitting size (100-4000)
 - **Chunk Overlap**: Overlap between chunks (0-1000)
-- **Retrieval K**: Number of relevant chunks to retrieve (1-20)
+# RAG Chatbot Builder 🤖
 
-#### Advanced
-- **System Prompt**: Custom instructions for the AI
+A modern, no-code web platform for creating Retrieval-Augmented Generation (RAG) chatbots from your own documents. Upload PDFs, DOCX, TXT, or CSV files and let the assistant answer questions with source citations.
 
-## 🏗️ Project Structure
+## Highlights
+- Drag-and-drop document upload and ingestion
+- Multiple LLM providers (OpenAI, Anthropic, Groq, Ollama)
+- Embedding options: Ollama (local), HuggingFace (local/model hub), OpenAI
+- Persistent vector stores (ChromaDB) and FAISS support
+- Rich chat UI with Markdown-rendered responses (tables supported)
+- Upload progress indicator and printable chat view
+
+## Quick Start
+
+Prerequisites
+- Python 3.9+
+- Node.js 18+
+
+Backend (FastAPI)
+1. Open a terminal and change into the backend directory:
+
+```powershell
+cd backend
+```
+
+2. Create and activate a virtual environment (example uses PowerShell on Windows):
+
+```powershell
+python -m venv .venv
+& .\.venv\Scripts\Activate.ps1
+```
+
+3. Install Python dependencies:
+
+```powershell
+pip install -r requirements.txt
+```
+
+4. Create a `.env` file in `backend/` and add any provider keys you need:
+
+```env
+OPENAI_API_KEY=your_openai_api_key
+ANTHROPIC_API_KEY=your_anthropic_api_key  # optional
+GROQ_API_KEY=your_groq_api_key            # optional (for Groq provider)
+```
+
+5. Run the backend:
+
+```powershell
+python -m uvicorn main:app --reload
+```
+
+The API will be available at `http://localhost:8000`.
+
+Frontend (React + Vite)
+1. Open a second terminal and change into the frontend directory:
+
+```bash
+cd frontend
+```
+
+2. Install dependencies and run the dev server:
+
+```bash
+npm install
+npm run dev
+```
+
+The web UI will run at `http://localhost:5173` (or the port reported by Vite).
+
+## Usage Notes
+
+- Create a new chatbot, configure the LLM provider and model, then upload documents.
+- Supported file types: `PDF`, `TXT`, `DOCX`, `CSV`.
+- Document ingestion performs splitting, embedding, and indexing into the configured vector store.
+- In the Chat UI assistant messages are rendered from Markdown (via `marked`) with sanitization (DOMPurify), so tables render correctly.
+- Upload progress shows a spinner and a visual progress bar. Server-side processing progress (embedding/indexing) is not streamed to the UI by default.
+ - The ChatbotBuilder UI includes a `Retrieval K` numeric control so users can adjust how many chunks are retrieved per query (default: 4). Change it in the chatbot configuration before saving to tune retrieval behavior.
+
+### Key Configuration Options
+
+- `chunk_size` and `chunk_overlap`: control how documents are split for embeddings.
+- `retrieval_k`: number of top chunks retrieved for each query (default: `4` in the UI). Tune between 2–8 depending on your documents and model.
+- `embedding_provider`: choose `ollama_gpu`, `ollama_cpu`, `huggingface`, or `openai`.
+
+### Groq Models
+The frontend includes a Groq model option `openai/gpt-oss-120b` (select provider = Groq, then choose this model in the dropdown).
+
+## Project Structure
 
 ```
 RAG/
-├── backend/
-│   ├── main.py                 # FastAPI application
-│   ├── config.py               # Configuration settings
-│   ├── requirements.txt        # Python dependencies
+├── backend/                # FastAPI backend, LangChain integration
+│   ├── main.py
+│   ├── services/rag_service.py
 │   ├── models/
-│   │   └── chatbot.py         # Pydantic models
-│   ├── services/
-│   │   └── rag_service.py     # RAG logic and LangChain integration
-│   └── data/                   # Data storage (auto-created)
-│       ├── chatbots/          # Chatbot configurations
-│       └── uploads/           # Uploaded documents
-│
-└── frontend/
+│   └── data/               # chatbots, vector stores, uploads
+└── frontend/               # React + TypeScript app
     ├── src/
-    │   ├── App.tsx            # Main React component
-    │   ├── main.tsx           # Entry point
-    │   ├── index.css          # Global styles
-    │   ├── api/
-    │   │   └── chatbot.ts     # API client
-    │   ├── components/
-    │   │   └── Layout.tsx     # Layout component
-    │   └── pages/
-    │       ├── Dashboard.tsx       # Chatbot list
-    │       ├── ChatbotBuilder.tsx  # Chatbot configuration
-    │       └── ChatInterface.tsx   # Chat UI
-    ├── package.json
-    ├── vite.config.ts
-    ├── tailwind.config.js
-    └── tsconfig.json
+    │   ├── api/chatbot.ts
+    │   ├── pages/ChatbotBuilder.tsx
+    │   └── pages/ChatInterface.tsx
+    └── package.json
 ```
 
-## 🔌 API Endpoints
+## API (selected endpoints)
 
-### Chatbots
-- `POST /api/chatbots` - Create chatbot
-- `GET /api/chatbots` - List all chatbots
-- `GET /api/chatbots/{id}` - Get chatbot details
-- `PUT /api/chatbots/{id}` - Update chatbot
-- `DELETE /api/chatbots/{id}` - Delete chatbot
+- `POST /api/chatbots` — create a chatbot
+- `GET /api/chatbots` — list chatbots
+- `POST /api/chatbots/{id}/documents` — upload documents
+- `GET /api/chatbots/{id}/documents` — list documents
+- `POST /api/chatbots/{id}/chat` — chat with the bot
 
-### Documents
-- `POST /api/chatbots/{id}/documents` - Upload documents
-- `GET /api/chatbots/{id}/documents` - List documents
-- `DELETE /api/chatbots/{id}/documents/{doc_id}` - Delete document
+## Troubleshooting & Tips
 
-### Chat
-- `POST /api/chatbots/{id}/chat` - Send chat message
+- If uploads fail or backend crashes when using Ollama embeddings, try `huggingface` embeddings or `ollama_cpu` mode (more stable).
+- Windows file locks: deleting a chatbot that uses Chroma may fail if the process still holds file handles. Restarting the backend releases locks.
+- If Markdown tables aren't rendering in chat bubbles, ensure the frontend bundle is up-to-date (hard refresh) — assistant messages use sanitized HTML.
 
-## 🛠️ Tech Stack Details
+## Development Notes & Future Work
 
-### Backend
-- **FastAPI**: Modern, fast web framework
-- **LangChain**: LLM orchestration framework
-- **ChromaDB**: Vector database for embeddings
-- **FAISS**: Fast similarity search
-- **Pydantic**: Data validation
-- **OpenAI/Anthropic SDKs**: LLM integration
+- Server-side ingestion progress (SSE/polling) is not yet implemented — the UI reports HTTP upload progress only.
+- Consider adding a small registry of opened vector-store instances so `delete_chatbot` can reliably close handles before deleting files.
 
-### Frontend
-- **React 18**: UI library
-- **TypeScript**: Type safety
-- **Vite**: Fast build tool
-- **Tailwind CSS**: Utility-first styling
-- **React Router**: Navigation
-- **Axios**: HTTP client
-- **React Dropzone**: File uploads
-- **React Markdown**: Markdown rendering
-- **Lucide React**: Beautiful icons
+## Contributing
 
-## 🔐 Security Notes
-
-- **Never commit your `.env` file** with API keys
-- Keep your API keys secure
-- Consider rate limiting for production use
-- Implement user authentication for multi-user scenarios
-
-## 🚧 Future Enhancements
-
-- [ ] Streaming responses
-- [ ] Multiple conversation threads
-- [ ] Export/import chatbot configurations
-- [ ] Chat history persistence
-- [ ] More LLM providers (local models, Ollama, etc.)
-- [ ] Advanced RAG techniques (HyDE, multi-query, etc.)
-- [ ] User authentication and multi-tenancy
-- [ ] Analytics and usage tracking
-- [ ] Chatbot embedding (iframe/widget)
-
-## 📝 License
-
-MIT License - feel free to use this project for your own applications!
-
-## 🤝 Contributing
-
-Contributions are welcome! Feel free to open issues or submit pull requests.
-
-## 💡 Tips
-
-1. **Start with smaller documents** to test your chatbot
-2. **Adjust chunk size** based on document type:
-   - Technical docs: 500-1000
-   - General text: 1000-2000
-3. **Lower temperature (0.3-0.5)** for factual responses
-4. **Higher temperature (0.7-0.9)** for creative responses
-5. **Review sources** to understand where answers come from
-
-## ❓ Troubleshooting
-
-### Backend won't start
-- Verify Python version: `python --version` (3.9+)
-- Check virtual environment is activated
-- Ensure all dependencies installed: `pip install -r requirements.txt`
-- Verify `.env` file exists with valid API key
-
-### Frontend won't start
-- Verify Node version: `node --version` (18+)
-- Delete `node_modules` and reinstall: `npm install`
-- Check console for error messages
-
-### Upload fails
-- Verify file format is supported
-- Check file size (default max: 10MB)
-- Ensure backend is running
-
-### Chat not working
-- Verify documents are uploaded
-- Check API key is valid
-- Look at browser console and backend logs
-
-## 📧 Support
-
-For issues or questions, please open a GitHub issue.
+Contributions welcome — open issues or PRs. Be sure not to commit secrets (API keys) to source control.
 
 ---
 
-**Built with ❤️ using Python, React, and LangChain**
+Built with ❤️ using Python, FastAPI, React, and LangChain
